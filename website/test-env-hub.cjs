@@ -37,11 +37,11 @@ const { chromium } = require('playwright');
   await modalHeader.waitFor({ state: 'hidden', timeout: 5000 });
   console.log('Modal successfully closed via Done button!');
 
-  // Test Footer banner
-  console.log('Checking Footer Connected Environments Bar...');
-  const footerBar = page.locator('text=Live Site (GitHub Pages)');
-  await footerBar.waitFor({ state: 'visible' });
-  console.log('Footer Connected Environments verified!');
+  // Verify Footer is clean
+  console.log('Checking Footer navigation and ethics notice...');
+  const footerEthics = page.locator('text=Controlled Defensive Demonstrations Only');
+  await footerEthics.waitFor({ state: 'visible' });
+  console.log('Footer verified cleanly!');
 
   await browser.close();
   console.log('\n>>> ALL CONNECTED ENVIRONMENT INTERLINK TESTS PASSED! <<<');
