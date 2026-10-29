@@ -37,15 +37,9 @@ const { chromium } = require('playwright');
   await modalHeader.waitFor({ state: 'hidden', timeout: 5000 });
   console.log('Modal successfully closed via Done button!');
 
-  // Test Dashboard banner
-  console.log('Checking Dashboard Connected Environments Banner...');
-  const dashBanner = page.locator('h2:has-text("Connected Environments & Deployment Hub")');
-  await dashBanner.waitFor({ state: 'visible' });
-  console.log('Dashboard Connected Environments Hub verified!');
-
   // Test Footer banner
   console.log('Checking Footer Connected Environments Bar...');
-  const footerBar = page.locator('text=Live Site: rahmantec18.github.io/AI-OWASP-Top-10/');
+  const footerBar = page.locator('text=Live Site (GitHub Pages)');
   await footerBar.waitFor({ state: 'visible' });
   console.log('Footer Connected Environments verified!');
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ShieldCheck,
   Sparkles,
@@ -10,26 +10,11 @@ import {
   Terminal,
   FileSpreadsheet,
   Cpu,
-  ChevronRight,
-  Globe,
-  Laptop,
-  ExternalLink,
-  Copy,
-  Check,
-  GitBranch
+  ChevronRight
 } from 'lucide-react';
 import { CATEGORIES } from '../data/tutorData';
 
 export default function Dashboard({ setActiveTab, setSelectedCategory }) {
-  const [copiedLink, setCopiedLink] = useState(null);
-
-  const handleCopy = (text, type) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
-    }
-    setCopiedLink(type);
-    setTimeout(() => setCopiedLink(null), 2000);
-  };
   const metrics = [
     { label: "OWASP Categories", value: "6 Core", detail: "Top 10:2025 Release", icon: ShieldCheck, color: "text-cyan-400", border: "border-cyan-500/30" },
     { label: "Empirical Test Runs", value: "36 Runs", detail: "3 AI Tools × 2 Strategies", icon: Cpu, color: "text-indigo-400", border: "border-indigo-500/30" },
@@ -102,125 +87,6 @@ export default function Dashboard({ setActiveTab, setSelectedCategory }) {
             </div>
           );
         })}
-      </div>
-
-      {/* Interlinked Environments & Deployment Hub Banner */}
-      <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-r from-slate-900 via-[#0a1224] to-slate-900 border border-cyan-800/40 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800/80">
-              <Globe className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                Connected Environments & Deployment Hub
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-semibold">
-                  Live Synced
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                This project is simultaneously available on the live web via GitHub Pages and locally on port 5173.
-              </p>
-            </div>
-          </div>
-          <span className="text-xs font-mono text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-800/60 w-fit">
-            origin/main
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-          {/* Card 1: Live Deployment */}
-          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 transition-all space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-white">
-                <Globe className="w-4 h-4 text-emerald-400" />
-                <span>Live Production (GitHub Pages)</span>
-              </div>
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/60">
-                24/7 Live
-              </span>
-            </div>
-            <div className="font-mono text-xs text-cyan-300 bg-slate-900 p-2 rounded-lg border border-slate-800 truncate select-all">
-              https://rahmantec18.github.io/AI-OWASP-Top-10/
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Zero-setup live website for evaluators, mobile phones, and tablets.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <a
-                href="https://rahmantec18.github.io/AI-OWASP-Top-10/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors"
-              >
-                <span>Open Live Site</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-              <button
-                onClick={() => handleCopy('https://rahmantec18.github.io/AI-OWASP-Top-10/', 'dash-live')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
-              >
-                {copiedLink === 'dash-live' ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Copy URL</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2: Localhost Server */}
-          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-cyan-500/40 transition-all space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-white">
-                <Laptop className="w-4 h-4 text-cyan-400" />
-                <span>Localhost Server (Dev & Tests)</span>
-              </div>
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60">
-                Port 5173
-              </span>
-            </div>
-            <div className="font-mono text-xs text-cyan-300 bg-slate-900 p-2 rounded-lg border border-slate-800 truncate select-all">
-              http://localhost:5173/
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Local Vite development server with Playwright automated verification test suite.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <a
-                href="http://localhost:5173/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors"
-              >
-                <span>Open Localhost</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-              <button
-                onClick={() => handleCopy('http://localhost:5173/', 'dash-local')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
-              >
-                {copiedLink === 'dash-local' ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Copy URL</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Workflow Diagram Card */}
