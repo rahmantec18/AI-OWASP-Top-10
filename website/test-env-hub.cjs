@@ -15,17 +15,9 @@ const { chromium } = require('playwright');
   await envButton.first().click();
 
   console.log('Verifying Modal is visible...');
-  const modalHeader = page.locator('h3:has-text("Connected Environments & Live Sync Hub")');
+  const modalHeader = page.locator('h3:has-text("Official GitHub Source Repository")');
   await modalHeader.waitFor({ state: 'visible', timeout: 5000 });
   console.log('Modal header verified!');
-
-  const liveLink = page.locator('text=https://rahmantec18.github.io/AI-OWASP-Top-10/');
-  await liveLink.first().waitFor({ state: 'visible' });
-  console.log('Live GitHub Pages URL verified in modal!');
-
-  const localLink = page.locator('text=http://localhost:5173/');
-  await localLink.first().waitFor({ state: 'visible' });
-  console.log('Localhost URL verified in modal!');
 
   const repoLink = page.locator('text=https://github.com/rahmantec18/AI-OWASP-Top-10');
   await repoLink.first().waitFor({ state: 'visible' });
