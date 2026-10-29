@@ -145,7 +145,7 @@ export default function AutomationDownloads() {
 
         <button
           onClick={handleExportCsv}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+          className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 active:scale-95 w-full sm:w-auto"
         >
           <Sparkles className="w-4 h-4" />
           {downloadSuccess ? 'Downloaded CSV!' : 'Instant Live Quiz Export (.csv)'}
@@ -168,9 +168,9 @@ export default function AutomationDownloads() {
           As required by step 10 of the Capstone project plan, an automated Python CLI tool was developed using <code className="text-cyan-300 bg-slate-950 px-1 py-0.5 rounded">openpyxl</code> to compile, style, auto-fit, and export verified quiz questions directly into formatted spreadsheet workbooks with exact column mapping.
         </p>
 
-        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 space-y-2">
+        <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 space-y-2 overflow-x-auto max-w-full">
           <span className="text-[10px] text-slate-500 uppercase font-bold block">Run standalone from terminal:</span>
-          <div className="text-emerald-400">python 08_Automation/export_quiz_to_excel.py Automated_Quiz_Export.xlsx</div>
+          <div className="text-emerald-400 break-all select-all font-semibold">python 08_Automation/export_quiz_to_excel.py Automated_Quiz_Export.xlsx</div>
           <div className="text-slate-500 text-[11px] pt-1">Output: Generates styled Excel workbook with headers, auto-fit column widths, and verified answers.</div>
         </div>
       </div>
@@ -190,16 +190,16 @@ export default function AutomationDownloads() {
                 download
                 className="group p-5 rounded-2xl bg-slate-900/60 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 transition-all flex items-start justify-between gap-4 shadow-lg hover:shadow-cyan-500/10"
               >
-                <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700 group-hover:scale-105 transition-transform">
-                    <Icon className={`w-5 h-5 ${d.color}`} />
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700 group-hover:scale-105 transition-transform">
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${d.color}`} />
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-sm group-hover:text-cyan-300 transition-colors">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <span className="font-bold text-white text-xs sm:text-sm group-hover:text-cyan-300 transition-colors break-all">
                         {d.name}
                       </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 shrink-0">
                         {d.size}
                       </span>
                     </div>
