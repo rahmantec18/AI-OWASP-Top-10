@@ -11,7 +11,7 @@ export default function AutomationDownloads() {
       desc: "Consolidated Master Workbook with all 9 sheets, COUNTIFS formulas, and auto-filters.",
       type: "Master Excel",
       size: "32 KB",
-      href: "/CAPSTONE9_OWASP_AI_Verification.xlsx",
+      href: "./CAPSTONE9_OWASP_AI_Verification.xlsx",
       icon: FileSpreadsheet,
       color: "text-emerald-400"
     },
@@ -20,7 +20,7 @@ export default function AutomationDownloads() {
       desc: "Official OWASP Top 10:2025 Source Register with URLs, dates, and summaries.",
       type: "Excel Sheet",
       size: "7 KB",
-      href: "/01_Source_Register.xlsx",
+      href: "./01_Source_Register.xlsx",
       icon: FileSpreadsheet,
       color: "text-cyan-400"
     },
@@ -29,7 +29,7 @@ export default function AutomationDownloads() {
       desc: "Tool Comparison scoring across 3 models and Error Log tracking.",
       type: "Excel Sheet",
       size: "8 KB",
-      href: "/02_AI_Evaluation.xlsx",
+      href: "./02_AI_Evaluation.xlsx",
       icon: FileSpreadsheet,
       color: "text-cyan-400"
     },
@@ -38,7 +38,7 @@ export default function AutomationDownloads() {
       desc: "15 verified questions, multiple options, correct answer key, and evidence links.",
       type: "Excel Sheet",
       size: "9 KB",
-      href: "/05_Quiz_and_Answer_Key.xlsx",
+      href: "./05_Quiz_and_Answer_Key.xlsx",
       icon: FileSpreadsheet,
       color: "text-cyan-400"
     },
@@ -47,7 +47,7 @@ export default function AutomationDownloads() {
       desc: "Complete 7-slide presentation formatted for evaluator defense and live demo.",
       type: "PowerPoint",
       size: "39 KB",
-      href: "/06_Presentation.pptx",
+      href: "./06_Presentation.pptx",
       icon: Presentation,
       color: "text-amber-400"
     },
@@ -56,7 +56,7 @@ export default function AutomationDownloads() {
       desc: "Full prompt library documenting Strategy A & Strategy B templates for all categories.",
       type: "Markdown",
       size: "7 KB",
-      href: "/07_Prompt_Library.md",
+      href: "./07_Prompt_Library.md",
       icon: FileText,
       color: "text-indigo-400"
     },
@@ -65,7 +65,7 @@ export default function AutomationDownloads() {
       desc: "Quantitative before/after study evaluating accuracy and grounding improvements.",
       type: "Markdown",
       size: "4 KB",
-      href: "/09_Before_After_Analysis.md",
+      href: "./09_Before_After_Analysis.md",
       icon: FileText,
       color: "text-indigo-400"
     },
@@ -74,7 +74,7 @@ export default function AutomationDownloads() {
       desc: "Defensive ethics statement, controlled lab boundaries, and research design.",
       type: "Markdown",
       size: "4 KB",
-      href: "/10_Ethics_and_Methodology.md",
+      href: "./10_Ethics_and_Methodology.md",
       icon: FileText,
       color: "text-indigo-400"
     },
@@ -83,7 +83,7 @@ export default function AutomationDownloads() {
       desc: "Comprehensive evidence audit cross-referencing AI statements with OWASP 2025.",
       type: "Markdown",
       size: "6 KB",
-      href: "/03_Verification_Report.md",
+      href: "./03_Verification_Report.md",
       icon: FileText,
       color: "text-indigo-400"
     },
@@ -92,7 +92,7 @@ export default function AutomationDownloads() {
       desc: "Complete student study guide with Mermaid diagrams and deep-dive risk taxonomy.",
       type: "Markdown",
       size: "7 KB",
-      href: "/04_Study_Guide.md",
+      href: "./04_Study_Guide.md",
       icon: FileText,
       color: "text-indigo-400"
     }

@@ -22,7 +22,7 @@ export default function ResearchReport() {
         </div>
 
         <a
-          href="/06_Presentation.pptx"
+          href="./06_Presentation.pptx"
           download="06_Presentation.pptx"
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs transition-all shadow-lg shadow-cyan-500/20 active:scale-95"
         >

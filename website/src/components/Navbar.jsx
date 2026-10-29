@@ -11,11 +11,27 @@ import {
   Menu,
   X,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Globe,
+  Laptop,
+  ExternalLink,
+  Copy,
+  Check,
+  GitBranch
 } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [envModalOpen, setEnvModalOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(null);
+
+  const handleCopy = (text, type) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedLink(type);
+    setTimeout(() => setCopiedLink(null), 2000);
+  };
 
   const navItems = [
     {
@@ -89,59 +105,76 @@ export default function Navbar({ activeTab, setActiveTab }) {
       <div className="max-w-[1536px] mx-auto px-3 sm:px-6">
         
         {/* Top Bar: Brand Identity & Quick Status */}
-        <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2 sm:gap-3">
           
           {/* Logo & Brand Identity */}
           <div
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer shrink-0 group select-none"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer shrink min-w-0 group select-none"
             onClick={() => handleSelectTab('dashboard')}
           >
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400/40 group-hover:scale-105 transition-transform duration-200">
-              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400/40 group-hover:scale-105 transition-transform duration-200 shrink-0">
+              <Shield className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
             </div>
             
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-extrabold text-sm sm:text-base md:text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-200 bg-clip-text text-transparent">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="font-extrabold text-xs sm:text-base md:text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-200 bg-clip-text text-transparent truncate">
                   OWASP AI TUTOR
                 </span>
-                <span className="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 rounded-full shrink-0">
+                <span className="px-1.5 py-0.5 text-[8px] sm:text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 rounded-full shrink-0">
                   Top 10:2025
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
-                <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+              <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-mono text-slate-400">
+                <span className="flex items-center gap-1 text-emerald-400 font-semibold shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   96.8% Verified
                 </span>
-                <span className="text-slate-600 hidden sm:inline">·</span>
-                <span className="hidden sm:inline text-slate-400">CAPSTONE 9 · LEARN · VERIFY · SECURE</span>
+                <span className="text-slate-600 hidden xl:inline">·</span>
+                <span className="hidden xl:inline text-slate-400">CAPSTONE 9 · LEARN · VERIFY · SECURE</span>
               </div>
             </div>
           </div>
 
-          {/* Right Header Elements: Active Module Indicator & Mobile/Tablet Drawer Toggle */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Active Pill on mobile/tablet */}
-            <div className="hidden sm:flex lg:hidden items-center gap-2 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
-              <ActiveIcon className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-white font-semibold">{activeItem.label}</span>
-            </div>
+          {/* Right Header Elements: Environment Hub & Mobile/Tablet Drawer Toggle */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Connected Environments Button */}
+            <button
+              onClick={() => setEnvModalOpen(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-cyan-500/50 transition-all text-xs font-semibold group shadow-sm active:scale-95"
+              title="View Interlinked Environments: Live GitHub Pages & Localhost"
+            >
+              <Globe className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-45 transition-transform duration-300" />
+              <span className="hidden lg:inline">Environments</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </button>
+
+            {/* Quick Live Link for Evaluators */}
+            <a
+              href="https://rahmantec18.github.io/AI-OWASP-Top-10/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/60 transition-all text-xs font-semibold"
+              title="Open Live GitHub Pages Deployment in New Tab"
+            >
+              <span>Live Site</span>
+              <ExternalLink className="w-3 h-3 text-cyan-400" />
+            </a>
 
             {/* Modules Drawer Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 transition-colors text-xs font-semibold"
+              className="lg:hidden flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 transition-colors text-xs font-semibold"
               aria-label="Toggle navigation modules"
             >
               {mobileMenuOpen ? (
                 <>
-                  <X className="w-4 h-4 text-rose-400" />
+                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" />
                   <span>Close</span>
                 </>
               ) : (
                 <>
-                  <Menu className="w-4 h-4 text-cyan-400" />
+                  <Menu className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
                   <span>Modules</span>
                   <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:inline" />
                 </>
@@ -221,6 +254,205 @@ export default function Navbar({ activeTab, setActiveTab }) {
                   </button>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connected Environments & Live Sync Hub Modal */}
+      {envModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#0b101e] border border-slate-700/80 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-950/80 border border-cyan-800/80 flex items-center justify-center text-cyan-400">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    Connected Environments & Live Sync Hub
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 font-semibold">
+                      Synced
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Direct access to the live production deployment, local dev server, and GitHub repo
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEnvModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Explanation Banner */}
+            <div className="p-3 rounded-xl bg-cyan-950/30 border border-cyan-800/40 text-xs text-cyan-200 leading-relaxed flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+              <div>
+                <strong>Interlinked Architecture:</strong> The live GitHub Pages deployment and the local development server are powered by the exact same verified codebase. All git commits to <code className="text-cyan-300 font-mono">origin/main</code> are synchronized across both environments.
+              </div>
+            </div>
+
+            {/* Environment Cards */}
+            <div className="space-y-3">
+              {/* Card 1: Live GitHub Pages */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      1. Live Production Deployment (GitHub Pages)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/60">
+                    Live Worldwide
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-850 font-mono text-xs text-cyan-300 break-all select-all">
+                  https://rahmantec18.github.io/AI-OWASP-Top-10/
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Publicly accessible worldwide for evaluators, instructors, and mobile devices without running any local terminal or node server.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    href="https://rahmantec18.github.io/AI-OWASP-Top-10/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-colors shadow-sm"
+                  >
+                    <span>Open Live Site</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button
+                    onClick={() => handleCopy('https://rahmantec18.github.io/AI-OWASP-Top-10/', 'live')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                  >
+                    {copiedLink === 'live' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Copy Link</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Localhost Server */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Laptop className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      2. Localhost Development & Preview Server
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60">
+                    Port 5173
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-850 font-mono text-xs text-cyan-300 break-all select-all">
+                  http://localhost:5173/
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Local high-speed development server with Vite hot-reloading and automated Playwright test verification.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    href="http://localhost:5173/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition-colors shadow-sm"
+                  >
+                    <span>Open Localhost</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button
+                    onClick={() => handleCopy('http://localhost:5173/', 'local')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                  >
+                    {copiedLink === 'local' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Copy Link</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 3: GitHub Repository */}
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <GitBranch className="w-4 h-4 text-indigo-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      3. Official GitHub Source Repository
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-800/60">
+                    origin/main
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-850 font-mono text-xs text-indigo-300 break-all select-all">
+                  https://github.com/rahmantec18/AI-OWASP-Top-10
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    href="https://github.com/rahmantec18/AI-OWASP-Top-10"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-sm"
+                  >
+                    <span>View Repository</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button
+                    onClick={() => handleCopy('https://github.com/rahmantec18/AI-OWASP-Top-10', 'repo')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+                  >
+                    {copiedLink === 'repo' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Copy URL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <span className="text-[11px] text-slate-500 font-mono">
+                Repository synchronized with origin/main
+              </span>
+              <button
+                onClick={() => setEnvModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
