@@ -3,11 +3,12 @@ const assert = require('assert');
 
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
-  const page = await browser.newPage();
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
 
   console.log('Navigating to http://localhost:5173/ ...');
-  await page.goto('http://localhost:5173/');
-  await page.waitForTimeout(1000);
+  await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(500);
 
   console.log('Navigating to Quiz & Glossary tab...');
   await page.click('button:has-text("Quiz & Glossary")');

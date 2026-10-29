@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { CODE_LABS } from '../data/tutorData';
-import { Code2, Play, CheckCircle2, AlertTriangle, Copy, Check, Terminal, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Code2, Play, CheckCircle2, AlertTriangle, Copy, Check, Terminal, ShieldAlert, ShieldCheck, Sparkles, Layers } from 'lucide-react';
 
 export default function SecureCodeLab() {
   const [activeLabId, setActiveLabId] = useState('LAB-001');
+  const [activeExampleIndex, setActiveExampleIndex] = useState(0);
   const [copiedVulnerable, setCopiedVulnerable] = useState(false);
   const [copiedFixed, setCopiedFixed] = useState(false);
   const [simulationRunning, setSimulationRunning] = useState(false);
   const [simulationResult, setSimulationResult] = useState(null);
 
   const currentLab = CODE_LABS.find(l => l.id === activeLabId) || CODE_LABS[0];
+  const activeExample = (currentLab.examples && currentLab.examples[activeExampleIndex])
+    ? currentLab.examples[activeExampleIndex]
+    : currentLab;
 
   const handleCopy = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -28,8 +32,8 @@ export default function SecureCodeLab() {
     setTimeout(() => {
       setSimulationRunning(false);
       setSimulationResult({
-        vulnerable: currentLab.simulatedVulnerableResult,
-        secure: currentLab.simulatedSecureResult
+        vulnerable: activeExample.simulatedVulnerableResult || currentLab.simulatedVulnerableResult,
+        secure: activeExample.simulatedSecureResult || currentLab.simulatedSecureResult
       });
     }, 800);
   };
@@ -56,6 +60,7 @@ export default function SecureCodeLab() {
               key={lab.id}
               onClick={() => {
                 setActiveLabId(lab.id);
+                setActiveExampleIndex(0);
                 setSimulationResult(null);
               }}
               className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
@@ -71,21 +76,66 @@ export default function SecureCodeLab() {
         </div>
       </div>
 
-      {/* Lab Title Banner */}
-      <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-        <div className="flex items-center justify-between">
+      {/* Lab Title Banner & Multi-Example Switcher */}
+      <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">
               {currentLab.owaspId}
             </span>
-            <span className="text-xs font-mono text-slate-400 uppercase">Language: {currentLab.language}</span>
+            <span className="text-xs font-mono text-slate-400 uppercase">
+              Language: {currentLab.language}
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono hidden md:inline">
+              2 Interactive Code Examples
+            </span>
           </div>
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold">
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold w-fit">
             Status: Verified Fix
           </span>
         </div>
-        <h2 className="text-xl font-bold text-white">{currentLab.name}</h2>
-        <p className="text-xs text-slate-300">{currentLab.whyFixWorks}</p>
+
+        <div>
+          <h2 className="text-xl font-bold text-white">
+            {activeExample.title || currentLab.name}
+          </h2>
+          {activeExample.subtitle && (
+            <p className="text-xs font-mono text-cyan-300 mt-0.5">
+              Focus: {activeExample.subtitle}
+            </p>
+          )}
+          <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+            {activeExample.whyFixWorks || currentLab.whyFixWorks}
+          </p>
+        </div>
+
+        {/* 2-Example Switcher Pills */}
+        {currentLab.examples && currentLab.examples.length > 1 && (
+          <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-cyan-400" />
+              Hands-On Scenarios for {currentLab.owaspId.split(':')[0]}:
+            </span>
+            <div className="flex items-center gap-2">
+              {currentLab.examples.map((ex, idx) => (
+                <button
+                  key={ex.id}
+                  onClick={() => {
+                    setActiveExampleIndex(idx);
+                    setSimulationResult(null);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                    activeExampleIndex === idx
+                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-bold shadow-md shadow-cyan-500/20'
+                      : 'bg-slate-950 text-slate-400 border-slate-850 hover:border-slate-700 hover:text-white'
+                  }`}
+                >
+                  {ex.title.split(':')[0]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Code Comparison (Vulnerable vs Fixed) */}
@@ -98,7 +148,7 @@ export default function SecureCodeLab() {
               Insecure / Vulnerable Anti-Pattern
             </div>
             <button
-              onClick={() => handleCopy(currentLab.vulnerableCode, 'vulnerable')}
+              onClick={() => handleCopy(activeExample.vulnerableCode || currentLab.vulnerableCode, 'vulnerable')}
               className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 transition-colors"
             >
               {copiedVulnerable ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -106,7 +156,7 @@ export default function SecureCodeLab() {
             </button>
           </div>
           <pre className="p-4 text-xs font-mono text-rose-200 overflow-x-auto leading-relaxed bg-[#0a0709] flex-1">
-            <code>{currentLab.vulnerableCode}</code>
+            <code>{activeExample.vulnerableCode || currentLab.vulnerableCode}</code>
           </pre>
         </div>
 
@@ -118,7 +168,7 @@ export default function SecureCodeLab() {
               Hardened / Verified Defensive Pattern
             </div>
             <button
-              onClick={() => handleCopy(currentLab.fixedCode, 'fixed')}
+              onClick={() => handleCopy(activeExample.fixedCode || currentLab.fixedCode, 'fixed')}
               className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 transition-colors"
             >
               {copiedFixed ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -126,7 +176,7 @@ export default function SecureCodeLab() {
             </button>
           </div>
           <pre className="p-4 text-xs font-mono text-emerald-200 overflow-x-auto leading-relaxed bg-[#070b09] flex-1">
-            <code>{currentLab.fixedCode}</code>
+            <code>{activeExample.fixedCode || currentLab.fixedCode}</code>
           </pre>
         </div>
       </div>
@@ -158,7 +208,7 @@ export default function SecureCodeLab() {
         {/* Test Payload Preview */}
         <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 space-y-1">
           <span className="text-[10px] text-slate-500 uppercase font-bold block">Simulated Test Input:</span>
-          <div>{JSON.stringify(currentLab.testPayload, null, 2)}</div>
+          <div>{JSON.stringify(activeExample.testPayload || currentLab.testPayload, null, 2)}</div>
         </div>
 
         {/* Simulation Output Comparison */}

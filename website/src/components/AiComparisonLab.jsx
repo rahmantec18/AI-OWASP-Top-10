@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AI_COMPARISONS } from '../data/tutorData';
-import { GitCompare, Sparkles, AlertTriangle, CheckCircle, Terminal, HelpCircle, ArrowRight } from 'lucide-react';
+import { GitCompare, Sparkles, AlertTriangle, CheckCircle, Terminal, HelpCircle, ArrowRight, BookOpen, Lightbulb, ShieldCheck } from 'lucide-react';
 
 export default function AiComparisonLab({ setActiveTab }) {
   const [selectedCat, setSelectedCat] = useState('A01:2025');
@@ -198,6 +198,95 @@ export default function AiComparisonLab({ setActiveTab }) {
             </div>
           );
         })}
+      </div>
+
+      {/* Educational Breakdown: Why Strategy A Failed vs Why Strategy B Succeeded */}
+      <div className="p-6 md:p-8 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-6 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
+              <Lightbulb className="w-4 h-4 text-cyan-400" />
+              Behind the Prompts · Real-World AI Security Analysis
+            </div>
+            <h3 className="text-xl font-bold text-white mt-1">
+              Why Did Strategy A Hallucinate & How Did Strategy B Fix It?
+            </h3>
+            <p className="text-xs text-slate-400">
+              Concrete examples illustrating why general conversational AI makes security mistakes and how evidence anchoring prevents them.
+            </p>
+          </div>
+          <span className="text-xs px-3 py-1 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono w-fit">
+            3 Core Case Studies
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Example 1 */}
+          <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/60 font-bold">
+                  ChatGPT (GPT-4o)
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">A04 Cryptography</span>
+              </div>
+              <h4 className="text-sm font-bold text-white">The Fast Hash Trap (SHA-256 vs Argon2id)</h4>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <strong className="text-rose-400">What went wrong in Strategy A:</strong> ChatGPT recommended general SHA-256 for user passwords. Because SHA-256 is lightning-fast, modern graphics cards can compute billions of guesses per second to crack stolen databases.
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <strong className="text-emerald-400">How Strategy B solved it:</strong> Requiring explicit OWASP Top 10:2025 citations forced the model to anchor in password security standards, immediately switching to memory-hard Argon2id.
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-cyan-300 font-mono">
+              💡 Takeaway: Always constrain AI prompts to reference modern cryptographic RFC/NIST standards.
+            </div>
+          </div>
+
+          {/* Example 2 */}
+          <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60 font-bold">
+                  Gemini (1.5 Pro)
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">A01 Access Control</span>
+              </div>
+              <h4 className="text-sm font-bold text-white">The Database vs API Boundary Error</h4>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <strong className="text-rose-400">What went wrong in Strategy A:</strong> Gemini described IDOR as solely a database schema issue, omitting the crucial need for server-side API routing and session verification middleware.
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <strong className="text-emerald-400">How Strategy B solved it:</strong> Requiring step-by-step mitigation checklists forced Gemini to explain the complete architectural boundary from HTTP request cookies down to SQL parameters.
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-cyan-300 font-mono">
+              💡 Takeaway: Ask AI to explicitly break down defensive checks at both the network and data layers.
+            </div>
+          </div>
+
+          {/* Example 3 */}
+          <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/60 font-bold">
+                  Claude (3.5 Sonnet)
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">A03 Supply Chain</span>
+              </div>
+              <h4 className="text-sm font-bold text-white">The Package Version Pinning Illusion</h4>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <strong className="text-rose-400">What went wrong in Strategy A:</strong> Claude suggested pinning package versions in package.json alone was sufficient, neglecting lockfiles, hash validation, and malicious lifecycle hooks.
+              </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <strong className="text-emerald-400">How Strategy B solved it:</strong> Demanding an uncertainty audit prompted Claude to include 'npm ci --ignore-scripts' and automated Software Bill of Materials (SBOM) audits.
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-cyan-300 font-mono">
+              💡 Takeaway: Direct AI to list what a solution does NOT protect against (threat boundary analysis).
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

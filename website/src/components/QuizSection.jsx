@@ -10,7 +10,8 @@ import {
   Search,
   Shuffle,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 
 // Fisher-Yates shuffle algorithm that randomizes options and tracks the new correct answer index
@@ -416,6 +417,18 @@ export default function QuizSection() {
                       <span className="text-[10px] text-indigo-400 font-bold uppercase block mb-0.5">Technical Definition</span>
                       <p className="text-slate-300 font-mono text-[11px]">{g.technical}</p>
                     </div>
+
+                    {g.realWorldExample && (
+                      <div className="p-2.5 rounded bg-cyan-950/30 border border-cyan-800/40 space-y-0.5">
+                        <span className="text-[10px] text-emerald-400 font-bold uppercase flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-emerald-400" />
+                          Everyday Relatable Example
+                        </span>
+                        <p className="text-slate-300 text-xs italic leading-relaxed">
+                          "{g.realWorldExample}"
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
